@@ -129,7 +129,7 @@ fn main() {
     let args: Vec<String> = std::env::args().collect();
 
     if args.len() != 5 {
-        eprintln!("Usage mandlebrot FILE PIXELS UPPER_LEFT LOWER_RIGHT");
+        eprintln!("Usage mandelbrot FILE PIXELS UPPER_LEFT LOWER_RIGHT");
         eprintln!("Example: {} mandel.png 1000x750 -1.20,0.35 -1,0.2", args[0]);
         std::process::exit(1);
     }
