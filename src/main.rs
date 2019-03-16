@@ -1,10 +1,10 @@
-extern crate crossbeam;
 extern crate image;
 extern crate num;
 
 use image::png::PNGEncoder;
 use image::ColorType;
 use num::Complex;
+use rayon::prelude::*;
 use std::fs::File;
 use std::str::FromStr;
 
@@ -139,25 +139,18 @@ fn main() {
     let lower_right = parse_complex(&args[4]).expect("error parsing lower right corner point");
 
     let mut pixels = vec![0; bounds.0 * bounds.1];
-
-    let threads = 8;
-    let rows_per_band = bounds.1 / threads + 1;
     {
-        let bands: Vec<&mut [u8]> = pixels.chunks_mut(rows_per_band * bounds.0).collect();
-        crossbeam::scope(|spawner| {
-            for (i, band) in bands.into_iter().enumerate() {
-                let top = rows_per_band * i;
-                let height = band.len() / bounds.0;
-                let band_bounds = (bounds.0, height);
-                let band_upper_left = pixel_to_point(bounds, (0, top), upper_left, lower_right);
-                let band_lower_right =
-                    pixel_to_point(bounds, (bounds.0, top + height), upper_left, lower_right);
-
-                spawner.spawn(move || {
-                    render(band, band_bounds, band_upper_left, band_lower_right);
-                });
-            }
-        });
+        let rows = pixels.par_chunks_mut(bounds.0);
+        rows.into_par_iter()
+            .enumerate()
+            .for_each(|(row_index, row)| {
+                let row_bounds = (bounds.0, 1);
+                let row_upper_left =
+                    pixel_to_point(bounds, (0, row_index), upper_left, lower_right);
+                let row_lower_right =
+                    pixel_to_point(bounds, (bounds.0, row_index), upper_left, lower_right);
+                render(row, row_bounds, row_upper_left, row_lower_right);
+            });
     }
 
     write_image(&args[1], &pixels, bounds).expect("error writing PNG file");
